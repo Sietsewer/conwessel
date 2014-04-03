@@ -16,22 +16,28 @@ public class InPanel extends Panel {
     Licht licht;
     Tuin tuin;
 
+    private void addGroup() {
+        Tuin.addGroup(new Group(11, this.hashCode()));
+    }
+
     public InPanel(String nr, Tuin tuin) {
         this.tuin = tuin;
         // ...
         Label kassaLabel = new Label("KASSA " + nr);
         kassaLabel.setBounds(24, 0, 48, 21);
         add(kassaLabel);
+
         aantalWachtendenVeld = new TextField();
         aantalWachtendenVeld.setBounds(0, 36, 36, 27);
         add(aantalWachtendenVeld);
+
         reserveerKnop = new Button();
         reserveerKnop.setLabel("Reserveer");
         reserveerKnop.setBounds(60, 36, 74, 25);
         reserveerKnop.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 synchronized (Tuin.aantalBezoekers) {
-                    Tuin.aantalBezoekers++;
+                    addGroup();
                 }
             }
         });
@@ -43,6 +49,8 @@ public class InPanel extends Panel {
         licht = new Licht();
         licht.setBounds(156, 36, 24, 24);
         add(licht);
+        Thread u = new Update(this);
+        u.start();
     }
 
     class Licht extends Canvas {
@@ -54,12 +62,16 @@ public class InPanel extends Panel {
         }
 
         public void setGroen() {
-            kleur = Color.green;
+            synchronized (kleur) {
+                kleur = Color.green;
+            }
             repaint();
         }
 
         public void setRood() {
-            kleur = Color.red;
+            synchronized (kleur) {
+                kleur = Color.red;
+            }
             repaint();
         }
 
@@ -76,5 +88,31 @@ public class InPanel extends Panel {
 
     class ReserveerActionListener /* ... */ {
         // ...
+    }
+
+    class Update extends Thread {
+
+        InPanel inPanel;
+
+        public Update(InPanel inPanel) {
+            this.inPanel = inPanel;
+        }
+
+        @Override
+        public void run() {
+            while (isAlive()) {
+                System.out.println(Tuin.getNext().size +"\n"+Tuin.getNext().kassa+"\n"+inPanel.hashCode()+"\n"+(Tuin.nextCanEnter() ? "True" : "False"));
+                if (((Tuin.getNext().kassa == inPanel.hashCode()) && Tuin.nextCanEnter()) || Tuin.getNext() == null) {
+                    inPanel.licht.setRood();
+                } else {
+                    inPanel.licht.setGroen();
+                }
+                try {
+                    Thread.sleep(500);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 }
