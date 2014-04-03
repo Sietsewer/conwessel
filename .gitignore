@@ -4,3 +4,4 @@
 *.jar
 *.war
 *.ear
+/concurrent3/nbproject/private/
