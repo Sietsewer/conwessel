@@ -1,5 +1,7 @@
 
-import java.util.ArrayList;
+import java.applet.Applet;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 // S.Verbeek 23-2-2001
 // De Tuin klasse bevat alle elementen die rechtstreeks met de tuin
@@ -10,53 +12,60 @@ import java.util.ArrayList;
 // raken. Zie soortgelijk voorbeeld in Oaks (p62).
 public class Tuin {
 
-    static int MAX_AANTAL_BEZOEKERS = 100;
-    static Integer aantalBezoekers = 0;
-    private static ArrayList<Group> waiting;
+    int MAX_AANTAL_BEZOEKERS = 100;
+    private int aantalBezoekers = 0;
+    public BusyFlag reseveerFlag;
+    Applet tuinApplet;
 
-    // Attributen
-    // ...
-    public Tuin() {
-        // ...
-    }
-    // Methoden (zie klassediagram in lesmateriaal)
-    // ...
-
-    public static void init() {
-        waiting = new ArrayList<>();
+    public Tuin(Applet tuinApplet) {
+        this.tuinApplet = tuinApplet;
+        this.reseveerFlag = new BusyFlag();
     }
 
-    synchronized public static void addGroup(Group g) {
-        synchronized (waiting) {
-            waiting.add(g);
-        }
+    public int getAantalBezoekers() {
+        return aantalBezoekers;
     }
 
-    synchronized public static boolean nextCanEnter() {
-        synchronized (waiting) {
-            if(waiting.size() > 0){
-                Group n = waiting.get(0);
-                return n.size >= (MAX_AANTAL_BEZOEKERS - aantalBezoekers);
+    public int getAantalVrijePlaatsen() {
+        return MAX_AANTAL_BEZOEKERS - aantalBezoekers;
+    }
+
+    public boolean reserveer(int aantal) {
+        reserveerLock();
+        Boolean b = true;
+        while (b) {
+            if (aantal < MAX_AANTAL_BEZOEKERS && aantal < (MAX_AANTAL_BEZOEKERS - aantalBezoekers)) {
+                aantalBezoekers += aantal;
+                b = false;
             }
-            return true;
-        }
-    }
-
-    synchronized public static void nextGroup() {
-        if (nextCanEnter()) {
-            synchronized (waiting) {
-                synchronized (aantalBezoekers) {
-                    aantalBezoekers += waiting.remove(0).size;
-                }
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(Tuin.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
+        reserveerUnlock();
+        return true;
     }
 
-    synchronized public static Group getNext() {
-        if (waiting.size() > 0) {
-            return waiting.get(0);
-        } else {
-            return new Group(0, 0);
-        }
+    public synchronized boolean bezoekerVertrekt() {
+        if(aantalBezoekers > 0){
+        aantalBezoekers--;
+        }return false;
+    }
+
+    public void pasLabelsAan() {
+    }
+
+    public void reserveerLock() {
+        this.reseveerFlag.getBusyFlag();
+    }
+
+    public void reserveerUnlock() {
+        this.reseveerFlag.freeBusyFlag();
+    }
+
+    public Thread getReserveerFlagOwner() {
+        return this.reseveerFlag.getBusyFlagOwner();
     }
 }

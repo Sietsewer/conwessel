@@ -10,18 +10,14 @@ import java.applet.*;
 public class InPanel extends Panel {
     // ...
 
+    MyApplet tuinApplet;
     TextField aantalWachtendenVeld;
     Button reserveerKnop;
     Label inLabel;
     Licht licht;
-    Tuin tuin;
 
-    private void addGroup() {
-        Tuin.addGroup(new Group(11, this.hashCode()));
-    }
-
-    public InPanel(String nr, Tuin tuin) {
-        this.tuin = tuin;
+    public InPanel(String nr, MyApplet tuinApplet) {
+        this.tuinApplet = tuinApplet;
         // ...
         Label kassaLabel = new Label("KASSA " + nr);
         kassaLabel.setBounds(24, 0, 48, 21);
@@ -29,18 +25,13 @@ public class InPanel extends Panel {
 
         aantalWachtendenVeld = new TextField();
         aantalWachtendenVeld.setBounds(0, 36, 36, 27);
+        aantalWachtendenVeld.setText("1");
         add(aantalWachtendenVeld);
 
         reserveerKnop = new Button();
         reserveerKnop.setLabel("Reserveer");
         reserveerKnop.setBounds(60, 36, 74, 25);
-        reserveerKnop.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                synchronized (Tuin.aantalBezoekers) {
-                    addGroup();
-                }
-            }
-        });
+        reserveerKnop.addActionListener(new ReserveerActionListener(this));
 
         add(reserveerKnop);
         inLabel = new Label("IN " + nr);
@@ -49,8 +40,7 @@ public class InPanel extends Panel {
         licht = new Licht();
         licht.setBounds(156, 36, 24, 24);
         add(licht);
-        Thread u = new Update(this);
-        u.start();
+        licht.setGroen();
     }
 
     class Licht extends Canvas {
@@ -75,44 +65,34 @@ public class InPanel extends Panel {
             repaint();
         }
 
-        public void groenPuls() //Zet licht gedurende 3s op groen.
-        {
-            // ...
-        }
-
         public void paint(Graphics g) {
             g.setColor(kleur);
             g.fillOval(0, 0, 24, 24);
         }
     }
 
-    class ReserveerActionListener /* ... */ {
-        // ...
-    }
+    class ReserveerActionListener implements Runnable, ActionListener{
 
-    class Update extends Thread {
-
-        InPanel inPanel;
-
-        public Update(InPanel inPanel) {
-            this.inPanel = inPanel;
+        private Thread t = null;
+        private MyApplet applet;
+        private InPanel panel;
+        
+        public ReserveerActionListener(InPanel panel){
+            this.applet = panel.tuinApplet;
+            this.panel = panel;
+            
         }
 
         @Override
         public void run() {
-            while (isAlive()) {
-                System.out.println(Tuin.getNext().size +"\n"+Tuin.getNext().kassa+"\n"+inPanel.hashCode()+"\n"+(Tuin.nextCanEnter() ? "True" : "False"));
-                if (((Tuin.getNext().kassa == inPanel.hashCode()) && Tuin.nextCanEnter()) || Tuin.getNext() == null) {
-                    inPanel.licht.setRood();
-                } else {
-                    inPanel.licht.setGroen();
-                }
-                try {
-                    Thread.sleep(500);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
+            panel.licht.setRood();
+            applet.tuin.reserveer(Integer.parseInt(panel.aantalWachtendenVeld.getText()));
+            panel.licht.setGroen();
+        }
+
+        @Override
+        public void actionPerformed(ActionEvent ae) {
+            new Thread(this).start();
         }
     }
 }
